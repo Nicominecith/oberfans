@@ -19,6 +19,7 @@ const MAX_CODE_TRIES = 5;
 const MAX_MEDIA      = 5 * 1024 * 1024;   // Netlify-Functions erlauben ~6 MB pro Request
 const MAX_AVATAR     = 1.5 * 1024 * 1024;
 const FEED_LIMIT     = 60;
+const MAX_PHOTOS     = 6;   // wie bei Tinder: bis zu 6 Fotos, das erste ist das Profilbild
 const MEDIA_TYPES = {
   'image/jpeg': 'jpg', 'image/png': 'png', 'image/gif': 'gif', 'image/webp': 'webp',
   'video/mp4': 'mp4', 'video/webm': 'webm', 'video/ogg': 'ogg', 'video/quicktime': 'mov'
@@ -87,10 +88,19 @@ function avatarSvg(name) {
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="hsl(${hue},75%,55%)"/><stop offset="1" stop-color="hsl(${hue2},80%,45%)"/></linearGradient></defs><rect width="120" height="120" fill="url(#g)"/><text x="60" y="60" dy=".35em" text-anchor="middle" font-family="Arial,sans-serif" font-size="46" font-weight="700" fill="#fff">${ini.replace(/[<>&]/g, '')}</text></svg>`;
 }
 
+// Fotos eines Nutzers (Altbestand: nur das eine Profilbild, falls es ein echtes Foto ist)
+function photosOf(u) {
+  if (Array.isArray(u.photos) && u.photos.length) return u.photos;
+  return /^\/api\/media\//.test(u.avatar || '') ? [u.avatar] : [];
+}
+
 function publicUser(u) {
+  const photos = photosOf(u);
   const legacy = /^https:\/\/api\.dicebear\.com\//.test(u.avatar || '');
   return {
-    username: u.username, avatar: legacy ? `/api/avatar/${encodeURIComponent(u.username)}` : u.avatar, bio: u.bio || '',
+    username: u.username,
+    avatar: photos[0] || (legacy || !u.avatar ? `/api/avatar/${encodeURIComponent(u.username)}` : u.avatar),
+    photos, bio: u.bio || '',
     gender: u.gender || '', age: u.age || '', interests: u.interests || [], createdAt: u.createdAt
   };
 }
@@ -110,7 +120,7 @@ async function saveDataUrl(dataUrl, prefix) {
   if (!m) return null;
   const buf = Buffer.from(m[2], 'base64');
   if (buf.length > MAX_AVATAR) throw new Error('Profilbild zu groß');
-  const key = `${prefix}_${Date.now()}.${MEDIA_TYPES[m[1]]}`;
+  const key = `${prefix}_${Date.now()}_${crypto.randomBytes(2).toString('hex')}.${MEDIA_TYPES[m[1]]}`;
   await media().set(key, toArrayBuffer(buf), { metadata: { contentType: m[1] } });
   return `/api/media/${key}`;
 }
@@ -229,7 +239,8 @@ async function route(req) {
     const user = {
       username: p.username, email: p.email, passwordHash: p.passwordHash,
       bio: p.bio, gender: p.gender, birthdate: p.birthdate, age: calcAge(p.birthdate), interests: p.interests || [], blocked: [],
-      avatar: avatarUrl, createdAt: new Date().toISOString()
+      avatar: avatarUrl, photos: avatarUrl.startsWith('/api/media/') ? [avatarUrl] : [],
+      createdAt: new Date().toISOString()
     };
     await users().setJSON(key, user);
     await emails().set(emailKey(p.email), key);
@@ -270,25 +281,50 @@ async function route(req) {
   if (!me) return fail(401, 'Nicht eingeloggt');
   const myKey = lc(me.username);
 
-  // Profil aktualisieren
-  if (a === 'profile' && method === 'PUT') {
-    const { bio, gender, age, avatar, interests } = await req.json();
-    if (age !== undefined && age !== '' && (isNaN(age) || Number(age) < MIN_AGE))
-      return fail(400, `Alter muss mind. ${MIN_AGE} sein`);
+  // Profil aktualisieren (Bio, Geschlecht, Interessen – Alter kommt aus dem Geburtstag)
+  if (a === 'profile' && !b && method === 'PUT') {
+    const { bio, gender, avatar, interests } = await req.json();
     if (bio !== undefined) me.bio = String(bio).slice(0, 300);
-    if (gender !== undefined) me.gender = gender;
+    if (gender !== undefined) me.gender = ['male', 'female', 'divers', 'none', ''].includes(gender) ? gender : me.gender;
     if (interests !== undefined) me.interests = parseInterests(interests);
-    if (age !== undefined) me.age = age ? Number(age) : '';
-    if (avatar && avatar.startsWith('data:')) {
+    if (avatar && avatar.startsWith('data:')) {   // alte App-Versionen: ersetzt das Hauptfoto
       try {
-        const newUrl = await saveDataUrl(avatar, 'avatar_' + myKey);
+        const newUrl = await saveDataUrl(avatar, 'photo_' + myKey);
         if (!newUrl) return fail(400, 'Ungültiges Bild');
-        await deleteOldMedia(me.avatar);
-        me.avatar = newUrl;
+        const ph = photosOf(me);
+        if (ph.length) { await deleteOldMedia(ph[0]); ph[0] = newUrl; } else ph.push(newUrl);
+        me.photos = ph; me.avatar = newUrl;
       } catch (e) { return fail(400, e.message); }
     }
     await users().setJSON(myKey, me);
     return json({ message: 'Profil aktualisiert', token: await sign(me), ...publicUser(me) });
+  }
+
+  // Foto hinzufügen
+  if (a === 'profile' && b === 'photos' && method === 'POST') {
+    const { photo } = await req.json();
+    const ph = photosOf(me);
+    if (ph.length >= MAX_PHOTOS) return fail(400, `Maximal ${MAX_PHOTOS} Fotos`);
+    let url;
+    try { url = await saveDataUrl(photo, 'photo_' + myKey); } catch (e) { return fail(400, e.message); }
+    if (!url) return fail(400, 'Ungültiges Bild');
+    ph.push(url);
+    me.photos = ph; me.avatar = ph[0];
+    await users().setJSON(myKey, me);
+    return json(publicUser(me));
+  }
+
+  // Fotos neu ordnen / löschen (order = neue Reihenfolge, Fehlende werden gelöscht, erstes = Profilbild)
+  if (a === 'profile' && b === 'photos' && method === 'PUT') {
+    const { order } = await req.json();
+    const cur = photosOf(me);
+    if (!Array.isArray(order) || !order.length || new Set(order).size !== order.length
+      || order.length > cur.length || !order.every(u => cur.includes(u)))
+      return fail(400, 'Ungültige Fotoliste (mindestens 1 Foto nötig)');
+    for (const u of cur.filter(u => !order.includes(u))) await deleteOldMedia(u);
+    me.photos = order; me.avatar = order[0];
+    await users().setJSON(myKey, me);
+    return json(publicUser(me));
   }
 
   // Öffentliches Profil

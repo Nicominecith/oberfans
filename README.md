@@ -22,7 +22,8 @@ Lokal testen: `npm i -g netlify-cli && npm install && netlify dev` (mit `.env` n
 
 ## Funktionen
 - Registrierung wie bei Tinder (Schritt für Schritt: Name, E-Mail, Passwort, Geburtstag, Geschlecht, Interessen, Bio, Foto), **Profilbild Pflicht**, E-Mail-Code (Gmail), **Mindestalter 18**
-- Entdecken: Swipe-Karten (Drag oder Buttons), Filter nach Alter und Interesse
+- Profil bearbeiten wie bei Tinder: bis zu 6 Fotos (erstes = Profilbild, ★ Hauptfoto, ✕ löschen), Bio, Geschlecht, Interessen. Alter kommt aus dem Geburtstag. Jedes Gerät holt sich beim Öffnen das aktuelle Profil vom Server.
+- Entdecken: Swipe-Karten (Drag oder Buttons, Tippen links/rechts blättert durch die Fotos), Filter nach Alter und Interesse
 - Match bei gegenseitigem Like, Chat nur zwischen Matches
 - Blockieren und Melden (Meldungen liegen im Blob-Store `reports`, Netlify → Blobs)
 - Feed mit Beiträgen und Kommentaren bleibt erhalten

@@ -501,6 +501,31 @@ textarea.wz-in{height:130px!important}
 .wz-date #rb-d,.wz-date #rb-m{flex:0 0 28%}.wz-date #rb-y{flex:1}
 .wz-date span{font-size:1.4rem;font-weight:700;color:var(--muted)}
 .wz-skip{display:block;width:100%;margin-top:10px;padding:10px;background:none;border:none;color:var(--muted);font-weight:600;font-size:.9rem;cursor:pointer}
+
+/* Profil bearbeiten (Tinder-Stil) */
+.ed-sec{font-size:.72rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:20px 0 8px 4px}
+.ed-hint{font-size:.78rem;color:var(--muted);margin:0 4px 10px;line-height:1.4}
+.ed-done{background:var(--flame);border:none;color:#fff;font-weight:700;font-size:.88rem;padding:9px 18px;border-radius:99px;cursor:pointer}
+.ed-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.ed-slot{position:relative;aspect-ratio:2/3;border-radius:16px;overflow:hidden;background:rgba(0,0,0,.25);border:2px dashed var(--bord2);display:flex;align-items:center;justify-content:center;cursor:pointer}
+.ed-slot.has{border:none;cursor:default}
+.ed-slot img{width:100%;height:100%;object-fit:cover;display:block}
+.ed-plus{width:36px;height:36px;border-radius:50%;background:var(--flame);display:flex;align-items:center;justify-content:center;font-size:1.5rem;font-weight:300;color:#fff}
+.ed-x,.ed-star{position:absolute;bottom:6px;width:30px;height:30px;border-radius:50%;border:2px solid #fff;color:#fff;font-size:.8rem;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0}
+.ed-x{right:6px;background:var(--flame)}
+.ed-star{left:6px;background:rgba(0,0,0,.6)}
+.ed-main{position:absolute;left:6px;top:6px;font-size:.62rem;font-weight:700;padding:3px 9px;border-radius:99px;background:var(--flame);color:#fff}
+.ed-row{flex-direction:row;flex-wrap:wrap}
+.ed-row .wz-opt{flex:1 1 40%;padding:11px 12px;font-size:.85rem}
+.ed-ro{display:flex;justify-content:space-between;padding:13px 16px;background:rgba(0,0,0,.22);border-radius:16px;margin-bottom:8px;font-size:.92rem;color:var(--muted)}
+.ed-ro b{color:#fff}
+.prof-gallery{display:flex;gap:8px;overflow-x:auto;margin:14px 0 4px;padding-bottom:4px;-webkit-overflow-scrolling:touch}
+.prof-gallery img{height:150px;width:100px;object-fit:cover;border-radius:14px;flex-shrink:0;cursor:pointer}
+.lightbox{position:fixed;inset:0;background:rgba(0,0,0,.93);z-index:99999;display:flex;align-items:center;justify-content:center;animation:fadeIn .2s both}
+.lightbox img{max-width:100%;max-height:100%;object-fit:contain}
+.sw-dots{position:absolute;top:10px;left:14px;right:14px;display:flex;gap:4px;z-index:3;pointer-events:none}
+.sw-dots i{flex:1;height:3px;border-radius:3px;background:rgba(255,255,255,.35)}
+.sw-dots i.on{background:#fff}
 </style>
 </head>
 <body>
@@ -740,8 +765,7 @@ textarea.wz-in{height:130px!important}
             <div class="prof-top-row">
               <div class="prof-av-wrap">
                 <img class="prof-av" id="prof-av" src="" alt="">
-                <button class="prof-av-edit" id="prof-av-edit-btn" onclick="document.getElementById('prof-av-input').click()">✎</button>
-                <input class="prof-av-input" id="prof-av-input" type="file" accept="image/*" onchange="changeAvatar(this)">
+                <button class="prof-av-edit" id="prof-av-edit-btn" onclick="openEditModal()">✎</button>
               </div>
               <button class="prof-edit-btn" id="prof-edit-btn" onclick="openEditModal()">✎ Bearbeiten</button>
             </div>
@@ -749,6 +773,7 @@ textarea.wz-in{height:130px!important}
             <div class="prof-handle" id="prof-handle"></div>
             <div class="prof-meta" id="prof-meta"></div>
             <div class="prof-bio" id="prof-bio" style="display:none"></div>
+            <div class="prof-gallery" id="prof-gallery" style="display:none"></div>
             <div class="prof-stats">
               <div class="ps"><div class="ps-n" id="ps-posts">0</div><div class="ps-l">Posts</div></div>
               <div class="ps"><div class="ps-n" id="ps-likes">0</div><div class="ps-l">Likes</div></div>
@@ -786,38 +811,42 @@ textarea.wz-in{height:130px!important}
   </div>
 </div>
 
-<!-- EDIT PROFILE MODAL -->
+<!-- EDIT PROFILE MODAL (Tinder-Stil) -->
 <div class="modal-overlay" id="edit-modal" onclick="closeEditModal(event)">
   <div class="modal">
     <div class="modal-hd">
-      <span>✎ Profil bearbeiten</span>
-      <button class="modal-close" onclick="closeEditModal()">✕</button>
+      <span>Profil bearbeiten</span>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button class="ed-done" onclick="saveProfile()">Fertig</button>
+        <button class="modal-close" onclick="closeEditModal()">✕</button>
+      </div>
     </div>
     <div class="modal-bd">
-      <div class="modal-av-row">
-        <img class="modal-av" id="modal-av" src="" alt="">
-        <label class="modal-av-btn" for="modal-av-inp">📷 Profilbild ändern</label>
-        <input class="modal-av-input" id="modal-av-inp" type="file" accept="image/*" onchange="previewModalAvatar(this)">
+      <div class="ed-sec" style="margin-top:4px">Fotos</div>
+      <div class="ed-hint">Das erste Foto ist dein Profilbild. Mit ★ machst du ein Foto zum Hauptfoto, mit ✕ löschst du es. Mindestens 1 Foto, bis zu 6.</div>
+      <div class="ed-grid" id="ed-grid"></div>
+      <input class="modal-av-input" id="ed-photo-inp" type="file" accept="image/*" onchange="addPhoto(this)">
+
+      <div class="ed-sec">Über mich</div>
+      <div class="field" style="margin-bottom:2px"><textarea id="edit-bio" maxlength="300" oninput="updBioCount()" placeholder="Erzähl etwas über dich und was du gern machst …"></textarea></div>
+      <div class="ed-hint" id="ed-bio-count" style="text-align:right;margin:0 4px"></div>
+
+      <div class="ed-sec">Ich bin</div>
+      <div class="wz-opts ed-row" id="ed-gender">
+        <button type="button" class="wz-opt" data-v="female" onclick="pickEdGender(this)">Weiblich</button>
+        <button type="button" class="wz-opt" data-v="male" onclick="pickEdGender(this)">Männlich</button>
+        <button type="button" class="wz-opt" data-v="divers" onclick="pickEdGender(this)">Divers</button>
+        <button type="button" class="wz-opt" data-v="none" onclick="pickEdGender(this)">Keine Angabe</button>
       </div>
-      <div class="field"><label>Bio</label>
-        <textarea id="edit-bio" placeholder="Erzähl etwas über dich und was du gern machst..."></textarea></div>
-      <div class="field"><label>Interessen <span style="opacity:.4;font-size:.85em">(mit Komma trennen)</span></label>
-        <input id="edit-int" type="text" placeholder="Gaming, Musik, Reisen" maxlength="120"></div>
-      <div class="field-row">
-        <div class="field">
-          <label>Alter</label>
-          <input id="edit-age" type="number" min="18" max="120" placeholder="z.B. 22">
-        </div>
-        <div class="field">
-          <label>Geschlecht</label>
-          <select id="edit-gender">
-            <option value="">Keine Angabe</option>
-            <option value="male">Männlich</option>
-            <option value="female">Weiblich</option>
-            <option value="divers">Divers</option>
-          </select>
-        </div>
-      </div>
+
+      <div class="ed-sec">Interessen</div>
+      <div class="wz-chips" id="ed-chips"></div>
+      <div class="wz-add"><input id="ed-int-custom" type="text" maxlength="20" placeholder="Eigenes Interesse" onkeydown="if(event.key==='Enter'){event.preventDefault();addEdInterest()}"><button type="button" onclick="addEdInterest()">+</button></div>
+
+      <div class="ed-sec">Basis</div>
+      <div class="ed-ro"><span>Name</span><b id="ed-name"></b></div>
+      <div class="ed-ro"><span>Alter</span><b id="ed-age"></b></div>
+      <div class="ed-hint">Name und Alter (aus deinem Geburtstag) können nicht geändert werden.</div>
       <button class="btn-save" onclick="saveProfile()">Speichern ✓</button>
     </div>
   </div>
@@ -839,6 +868,7 @@ const API = '/api';
 let token = localStorage.getItem('of_token');
 let uname = localStorage.getItem('of_user');
 let uavt  = localStorage.getItem('of_avatar');
+if (uavt && uavt.startsWith('data:')) uavt = null;   // alte Geräte-Kopie nicht mehr verwenden
 let fD = null, fM = null, mediaTypeD = 'img', mediaTypeM = 'img';
 let allPosts = [], currentFeedMode = 'all';
 let myProfile = { bio: '', gender: '', age: '', interests: [] };
@@ -1039,7 +1069,7 @@ async function login() {
     localStorage.setItem('of_token', token);
     localStorage.setItem('of_user', uname);
     localStorage.setItem('of_avatar', uavt || '');
-    myProfile = { bio: d.bio || '', gender: d.gender || '', age: d.age || '', interests: d.interests || [] };
+    myProfile = { bio: d.bio || '', gender: d.gender || '', age: d.age || '', interests: d.interests || [], photos: d.photos || [] };
     showApp();
   } catch { err('Server nicht erreichbar.'); }
 }
@@ -1065,8 +1095,7 @@ function showApp() {
   loadFeed();
   document.getElementById('match-view').style.display = 'block';
   loadDeck();
-  fetch(`${API}/users/${enc(uname)}`, { headers: { Authorization: 'Bearer ' + token } })
-    .then(r => r.ok ? r.json() : null).then(d => { if (d) { myProfile = { ...myProfile, bio: d.bio || '', gender: d.gender || '', age: d.age || '', interests: d.interests || [] }; document.getElementById('sb-bio').textContent = myProfile.bio || 'Neu hier 👋'; } }).catch(() => {});
+  refreshMe(true);
 }
 
 /* ── MEDIA TOGGLE ──────────────────────────────────────────────────────────── */
@@ -1357,6 +1386,8 @@ async function viewProfile(username) {
   if (p.bio) { bioEl.textContent = p.bio; bioEl.style.display = 'block'; }
   else bioEl.style.display = 'none';
 
+  renderGallery(isMe ? myProfile.photos : p.photos);
+
   // Avatar aktualisieren falls vom Server geladen
   if (p.avatar && !isMe) document.getElementById('prof-av').src = p.avatar;
   if (isMe) document.getElementById('prof-av').src = uavt || `/api/avatar/${enc(uname)}`;
@@ -1384,85 +1415,140 @@ function showMeTab(btn) {
   viewProfile(uname);
 }
 
-/* ── AVATAR CHANGE (Profilseite) ────────────────────────────────────────────── */
-async function changeAvatar(inp) {
-  const f = inp.files[0]; if (!f) return;
-  const b64 = await fileToB64(f);
-  // Sofort lokal aktualisieren
-  uavt = b64; localStorage.setItem('of_avatar', b64);
-  ['hav', 'sb-av', 'prof-av'].forEach(id => document.getElementById(id).src = b64);
-  myProfile.avatar = b64;
-  // An Server senden
-  try {
-    const r = await fetch(`${API}/profile`, {
-      method: 'PUT', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
-      body: JSON.stringify({ avatar: b64 })
-    });
-    if (r.ok) {
-      const d = await r.json();
-      if (d.token) { token = d.token; localStorage.setItem('of_token', token); }
-      toast('✅ Profilbild aktualisiert!');
-    } else { toast('❌ Fehler beim Speichern des Profilbilds'); }
-  } catch { toast('❌ Server nicht erreichbar'); }
+/* ── EIGENES PROFIL VOM SERVER HOLEN (damit jedes Gerät aktuell ist) ───────── */
+let lastMe = 0;
+function applyMe(d) {
+  if (!d) return;
+  uavt = d.avatar || null; localStorage.setItem('of_avatar', uavt || '');
+  myProfile = { ...myProfile, bio: d.bio || '', gender: d.gender || '', age: d.age || '', interests: d.interests || [], photos: d.photos || [], avatar: uavt };
+  const src = uavt || `/api/avatar/${enc(uname)}`;
+  ['hav', 'sb-av'].forEach(id => { const el = document.getElementById(id); if (el) el.src = src; });
+  document.getElementById('sb-bio').textContent = myProfile.bio || 'Neu hier 👋';
+  if (document.getElementById('profile-view').style.display === 'block' && document.getElementById('prof-name').textContent === uname)
+    document.getElementById('prof-av').src = src;
 }
+async function refreshMe(force) {
+  if (!token || !uname) return;
+  if (!force && Date.now() - lastMe < 8000) return;
+  lastMe = Date.now();
+  try {
+    const r = await fetch(`${API}/users/${enc(uname)}`, { headers: authH() });
+    if (r.status === 401) return logout();
+    if (r.ok) applyMe(await r.json());
+  } catch {}
+}
+document.addEventListener('visibilitychange', () => { if (!document.hidden) refreshMe(); });
+window.addEventListener('focus', () => refreshMe());
 
-/* ── EDIT MODAL ────────────────────────────────────────────────────────────── */
-function openEditModal() {
-  document.getElementById('edit-bio').value    = myProfile.bio    || '';
-  document.getElementById('edit-age').value    = myProfile.age    || '';
-  document.getElementById('edit-gender').value = myProfile.gender || '';
-  document.getElementById('edit-int').value    = (myProfile.interests || []).join(', ');
-  document.getElementById('modal-av').src = uavt || `/api/avatar/${enc(uname)}`;
-  modalAvatarFile = null;
+/* ── PROFIL BEARBEITEN (Tinder-Stil: Fotos, Bio, Geschlecht, Interessen) ───── */
+let edPhotos = [], edGender = '', edInts = [], edBusy = false;
+async function openEditModal() {
+  await refreshMe(true);
+  edPhotos = [...(myProfile.photos || [])];
+  edGender = myProfile.gender || ''; edInts = [...(myProfile.interests || [])];
+  document.getElementById('edit-bio').value = myProfile.bio || '';
+  document.getElementById('ed-name').textContent = '@' + uname;
+  document.getElementById('ed-age').textContent = myProfile.age ? myProfile.age + ' Jahre' : '—';
+  updBioCount(); renderEdPhotos(); renderEdGender(); renderEdChips();
   document.getElementById('edit-modal').classList.add('open');
 }
 function closeEditModal(e) {
   if (!e || e.target === document.getElementById('edit-modal'))
     document.getElementById('edit-modal').classList.remove('open');
 }
-function previewModalAvatar(inp) {
-  const f = inp.files[0]; if (!f) return;
-  modalAvatarFile = f;
-  const r = new FileReader(); r.onload = e => document.getElementById('modal-av').src = e.target.result; r.readAsDataURL(f);
+function updBioCount() {
+  document.getElementById('ed-bio-count').textContent = document.getElementById('edit-bio').value.length + ' / 300';
+}
+function renderEdPhotos() {
+  let h = '';
+  for (let i = 0; i < 6; i++) {
+    const u = edPhotos[i];
+    h += u
+      ? `<div class="ed-slot has"><img src="${esc(u)}" alt="">${i === 0 ? '<span class="ed-main">Hauptfoto</span>' : `<button type="button" class="ed-star" onclick="mainPhoto(${i})" aria-label="Als Hauptfoto">★</button>`}<button type="button" class="ed-x" onclick="removePhoto(${i})" aria-label="Foto löschen">✕</button></div>`
+      : `<label class="ed-slot" for="ed-photo-inp"><span class="ed-plus">+</span></label>`;
+  }
+  document.getElementById('ed-grid').innerHTML = h;
+}
+async function addPhoto(inp) {
+  const f = inp.files[0]; inp.value = '';
+  if (!f || edBusy) return;
+  if (!f.type.startsWith('image/')) return toast('Bitte ein Bild wählen');
+  edBusy = true; toast('⏳ Foto wird hochgeladen …');
+  try {
+    const b64 = await fileToB64(f);
+    const r = await fetch(`${API}/profile/photos`, { method: 'POST', headers: authH(), body: JSON.stringify({ photo: b64 }) });
+    const d = await r.json();
+    if (!r.ok) toast('❌ ' + (d.error || 'Fehler beim Hochladen'));
+    else { edPhotos = d.photos || []; applyMe(d); renderEdPhotos(); toast('✅ Foto hinzugefügt'); }
+  } catch { toast('❌ Server nicht erreichbar'); }
+  edBusy = false;
+}
+async function savePhotoOrder(order, msg) {
+  if (edBusy) return; edBusy = true;
+  try {
+    const r = await fetch(`${API}/profile/photos`, { method: 'PUT', headers: authH(), body: JSON.stringify({ order }) });
+    const d = await r.json();
+    if (!r.ok) toast('❌ ' + (d.error || 'Fehler'));
+    else { edPhotos = d.photos || []; applyMe(d); renderEdPhotos(); toast(msg); }
+  } catch { toast('❌ Server nicht erreichbar'); }
+  edBusy = false;
+}
+function removePhoto(i) {
+  if (edPhotos.length <= 1) return toast('Du brauchst mindestens ein Foto');
+  savePhotoOrder(edPhotos.filter((_, k) => k !== i), '🗑️ Foto gelöscht');
+}
+function mainPhoto(i) {
+  savePhotoOrder([edPhotos[i], ...edPhotos.filter((_, k) => k !== i)], '✅ Hauptfoto geändert');
+}
+function renderEdGender() {
+  document.querySelectorAll('#ed-gender .wz-opt').forEach(b => b.classList.toggle('sel', b.dataset.v === edGender));
+}
+function pickEdGender(btn) { edGender = btn.dataset.v; renderEdGender(); }
+function renderEdChips() {
+  const all = [...new Set([...WZ_INTERESTS, ...edInts])];
+  document.getElementById('ed-chips').innerHTML = all.map(x =>
+    `<button type="button" class="wz-chip${edInts.includes(x) ? ' sel' : ''}" data-v="${esc(x)}" onclick="toggleEdInterest(this.dataset.v)">${esc(x)}</button>`).join('');
+}
+function toggleEdInterest(v) {
+  const i = edInts.indexOf(v);
+  if (i > -1) edInts.splice(i, 1);
+  else if (edInts.length >= 8) return toast('Maximal 8 Interessen');
+  else edInts.push(v);
+  renderEdChips();
+}
+function addEdInterest() {
+  const inp = document.getElementById('ed-int-custom');
+  const v = inp.value.trim().replace(/,/g, '').slice(0, 20);
+  if (!v) return;
+  if (!edInts.includes(v)) { if (edInts.length >= 8) return toast('Maximal 8 Interessen'); edInts.push(v); }
+  inp.value = ''; renderEdChips();
 }
 async function saveProfile() {
-  const bio    = document.getElementById('edit-bio').value.trim();
-  const age    = document.getElementById('edit-age').value;
-  const gender = document.getElementById('edit-gender').value;
-  if (age && (isNaN(age) || Number(age) < 18)) return toast('❌ Alter muss mind. 18 sein');
-
-  let avatarB64 = undefined;
-  if (modalAvatarFile) avatarB64 = await fileToB64(modalAvatarFile);
-
+  const bio = document.getElementById('edit-bio').value.trim();
   try {
-    const body = { bio, age: age ? Number(age) : '', gender, interests: document.getElementById('edit-int').value };
-    if (avatarB64) body.avatar = avatarB64;
-
     const r = await fetch(`${API}/profile`, {
-      method: 'PUT', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
-      body: JSON.stringify(body)
+      method: 'PUT', headers: authH(),
+      body: JSON.stringify({ bio, gender: edGender, interests: edInts.join(',') })
     });
     const d = await r.json();
     if (!r.ok) return toast('❌ ' + (d.error || 'Fehler beim Speichern'));
-
-    // Token aktualisieren
     if (d.token) { token = d.token; localStorage.setItem('of_token', token); }
-
-    // Avatar lokal updaten
-    if (avatarB64) {
-      uavt = avatarB64; localStorage.setItem('of_avatar', avatarB64);
-      ['hav', 'sb-av', 'prof-av'].forEach(id => document.getElementById(id).src = avatarB64);
-    }
-    if (d.avatar && !avatarB64) {
-      uavt = d.avatar; localStorage.setItem('of_avatar', d.avatar);
-    }
-
-    myProfile = { ...myProfile, bio, age: age ? Number(age) : '', gender, avatar: uavt, interests: (d.interests || []) };
-    document.getElementById('sb-bio').textContent = bio || 'Neu hier 👋';
+    applyMe(d);
     document.getElementById('edit-modal').classList.remove('open');
     viewProfile(uname);
     toast('✅ Profil gespeichert!');
   } catch { toast('❌ Server nicht erreichbar'); }
+}
+function renderGallery(photos) {
+  const g = document.getElementById('prof-gallery');
+  if (!photos || photos.length < 2) { g.style.display = 'none'; g.innerHTML = ''; return; }
+  g.style.display = 'flex';
+  g.innerHTML = photos.map(u => `<img src="${esc(u)}" alt="" onclick="openPhoto(this.src)">`).join('');
+}
+function openPhoto(src) {
+  const o = document.createElement('div'); o.className = 'lightbox';
+  o.innerHTML = `<img src="${esc(src)}" alt="">`; o.onclick = () => o.remove();
+  document.body.appendChild(o);
 }
 
 /* ── SEARCH ────────────────────────────────────────────────────────────────── */
@@ -1509,6 +1595,7 @@ function closeSheet(e) { if (!e || e.target === document.getElementById('ms')) d
 let deck = [], deckLoading = false, swiping = false, curChat = null, curChatAv = '', chatTimer = null, chatCount = -1;
 const authH = () => ({ 'Content-Type': 'application/json', Authorization: 'Bearer ' + token });
 const avOf = u => u.avatar || `/api/avatar/${enc(u.username)}`;
+const phs = u => (u.photos && u.photos.length) ? u.photos : [avOf(u)];
 
 function hap(ms) { try { navigator.vibrate && navigator.vibrate(ms); } catch (e) {} }
 function hideMatchViews() {
@@ -1550,7 +1637,8 @@ function renderDeck() {
   const u = deck[0], n = deck[1];
   st.innerHTML = (n ? `<div class="sw-card back" id="sw-back"><div class="sw-photo"><img src="${esc(avOf(n))}" alt=""></div></div>` : '') +
   `<div class="sw-card" id="sw-card">
-    <div class="sw-photo"><img src="${esc(avOf(u))}" alt=""></div>
+    <div class="sw-photo"><img id="sw-img" src="${esc(phs(u)[u._pi || 0])}" alt=""></div>
+    ${phs(u).length > 1 ? `<div class="sw-dots" id="sw-dots">${phs(u).map((_, i) => `<i class="${i === (u._pi || 0) ? 'on' : ''}"></i>`).join('')}</div>` : ''}
     <div class="sw-stamp like">LIKE</div><div class="sw-stamp nope">NOPE</div>
     <div class="sw-info"><div class="sw-name">${esc(u.username)} <small>${esc(u.age)}</small></div>
       <div class="sw-bio">${esc(u.bio || 'Noch keine Bio')}</div>
@@ -1575,8 +1663,11 @@ function attachDrag(card) {
     like.style.opacity = Math.max(0, Math.min(1, dx / 90)); nope.style.opacity = Math.max(0, Math.min(1, -dx / 90));
     if (back) { back.style.transform = `scale(${.93 + .07 * p}) translateY(${18 - 18 * p}px)`; back.style.filter = `brightness(${.55 + .45 * p})`; }
   });
-  const end = () => {
+  const end = (e) => {
     if (!drag) return; drag = false;
+    if (e && e.type === 'pointerup' && Math.abs(dx) < 8 && Math.abs(dy) < 8 && Date.now() - t0 < 350 && !e.target.closest('button')) {
+      const rc = card.getBoundingClientRect(); tapPhoto(e.clientX < rc.left + rc.width / 2 ? -1 : 1);
+    }
     const v = dx / Math.max(1, Date.now() - t0);
     if (dx > 110 || (v > .6 && dx > 40)) doSwipe('like');
     else if (dx < -110 || (v < -.6 && dx < -40)) doSwipe('pass');
@@ -1587,6 +1678,13 @@ function attachDrag(card) {
     dx = 0;
   };
   card.addEventListener('pointerup', end); card.addEventListener('pointercancel', end);
+}
+function tapPhoto(dir) {
+  const u = deck[0]; if (!u) return;
+  const ps = phs(u); if (ps.length < 2) return;
+  u._pi = Math.max(0, Math.min(ps.length - 1, (u._pi || 0) + dir));
+  document.getElementById('sw-img').src = ps[u._pi];
+  document.querySelectorAll('#sw-dots i').forEach((el, i) => el.classList.toggle('on', i === u._pi));
 }
 async function doSwipe(action) {
   if (swiping || !deck.length) return; swiping = true;
@@ -1701,8 +1799,8 @@ function toast(msg) {
 /* ── UTILS ─────────────────────────────────────────────────────────────────── */
 function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 function enc(s) { return encodeURIComponent(String(s)); }
-function fileToB64(f) {
-  // Avatare auf max. 512px verkleinern (JPEG) – hält Datenmenge klein
+function fileToB64(f, max = 900) {
+  // Fotos auf max. 900px verkleinern (JPEG) – hält Datenmenge klein
   return new Promise((res, rej) => {
     const r = new FileReader();
     r.onerror = rej;
@@ -1710,7 +1808,7 @@ function fileToB64(f) {
       const img = new Image();
       img.onerror = () => res(e.target.result);
       img.onload = () => {
-        const s = Math.min(1, 512 / Math.max(img.width, img.height));
+        const s = Math.min(1, max / Math.max(img.width, img.height));
         const c = document.createElement('canvas');
         c.width = Math.round(img.width * s); c.height = Math.round(img.height * s);
         c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
