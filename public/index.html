@@ -496,6 +496,10 @@ textarea.wz-in{height:130px!important}
 .wz-photo img{width:100%;height:100%;object-fit:cover}
 .wz-photo.has{border-style:solid;border-color:#fd267a}
 .wz-plus{width:54px;height:54px;border-radius:50%;background:var(--flame);display:flex;align-items:center;justify-content:center;font-size:2rem;font-weight:300;box-shadow:0 8px 24px rgba(253,38,122,.4)}
+.wz-date{display:flex;align-items:center;gap:8px}
+.wz-date input{text-align:center;min-width:0;width:100%}
+.wz-date #rb-d,.wz-date #rb-m{flex:0 0 28%}.wz-date #rb-y{flex:1}
+.wz-date span{font-size:1.4rem;font-weight:700;color:var(--muted)}
 .wz-skip{display:block;width:100%;margin-top:10px;padding:10px;background:none;border:none;color:var(--muted);font-weight:600;font-size:.9rem;cursor:pointer}
 </style>
 </head>
@@ -559,7 +563,17 @@ textarea.wz-in{height:130px!important}
           <div class="wz-step" data-s="3" style="display:none">
             <h2 class="wz-h">Wann hast du Geburtstag?</h2>
             <p class="wz-p">Du musst mindestens <b>18 Jahre</b> alt sein. Dein Alter wird in deinem Profil angezeigt, dein Geburtstag nicht.</p>
-            <div class="field"><input id="rbirth" type="date" class="wz-in" onchange="checkAge()"><div class="age-note" id="age-note"></div></div>
+            <div class="field">
+              <div class="wz-date">
+                <input id="rb-d" class="wz-in" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="2" placeholder="TT" autocomplete="off" oninput="birthIn(this,'rb-m',2)" onkeydown="if(event.key==='Enter')regNext()">
+                <span>.</span>
+                <input id="rb-m" class="wz-in" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="2" placeholder="MM" autocomplete="off" oninput="birthIn(this,'rb-y',2)" onkeydown="if(event.key==='Enter')regNext()">
+                <span>.</span>
+                <input id="rb-y" class="wz-in" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="4" placeholder="JJJJ" autocomplete="off" oninput="birthIn(this,null,4)" onkeydown="if(event.key==='Enter')regNext()">
+              </div>
+              <input id="rbirth" type="hidden">
+              <div class="age-note" id="age-note"></div>
+            </div>
           </div>
 
           <div class="wz-step" data-s="4" style="display:none">
@@ -877,8 +891,9 @@ function regCheck(i) {
   if (i === 1 && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(document.getElementById('re').value.trim())) return 'Bitte gültige E-Mail angeben.';
   if (i === 2 && document.getElementById('rp').value.length < 6) return 'Passwort mind. 6 Zeichen.';
   if (i === 3) {
+    checkAge();
     const b = document.getElementById('rbirth').value;
-    if (!b) return 'Bitte Geburtsdatum angeben.';
+    if (!b) return 'Bitte ein gültiges Geburtsdatum eingeben (TT MM JJJJ).';
     if (calcAge(b) < 18) return 'Du musst mindestens 18 Jahre alt sein.';
   }
   if (i === 4 && !regGender) return 'Bitte wähle eine Option.';
@@ -930,13 +945,26 @@ function calcAge(birthStr) {
   if (t.getMonth() - b.getMonth() < 0 || (t.getMonth() - b.getMonth() === 0 && t.getDate() < b.getDate())) a--;
   return a;
 }
+function birthIn(el, nextId, len) {
+  el.value = el.value.replace(/\D/g, '').slice(0, len);
+  if (nextId && el.value.length >= len) document.getElementById(nextId).focus();
+  checkAge();
+}
 function checkAge() {
-  const val = document.getElementById('rbirth').value;
-  const note = document.getElementById('age-note');
-  if (!val) { note.textContent = ''; return; }
-  const age = calcAge(val);
+  // setzt das versteckte Feld rbirth auf JJJJ-MM-TT, wenn das Datum echt ist
+  const d = +document.getElementById('rb-d').value, m = +document.getElementById('rb-m').value, y = +document.getElementById('rb-y').value;
+  const hid = document.getElementById('rbirth'), note = document.getElementById('age-note');
+  hid.value = ''; note.textContent = '';
+  if (!d || !m || document.getElementById('rb-y').value.length < 4) return false;
+  const dt = new Date(y, m - 1, d);
+  if (y < 1900 || dt > new Date() || dt.getFullYear() !== y || dt.getMonth() !== m - 1 || dt.getDate() !== d) {
+    note.textContent = '❌ Ungültiges Datum.'; note.style.color = '#ff8080'; return false;
+  }
+  hid.value = `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+  const age = calcAge(hid.value);
   if (age < 18) { note.textContent = '❌ Muss mindestens 18 Jahre alt sein.'; note.style.color = '#ff8080'; }
   else { note.textContent = `✓ Alter: ${age} Jahre`; note.style.color = 'var(--accent)'; }
+  return true;
 }
 async function regUser() {
   for (let i = 0; i < WZ_N; i++) { const m = regCheck(i); if (m) { regShow(i); return err(m); } }
